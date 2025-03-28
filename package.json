@@ -10,6 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^22.13.11"
+    "@discordjs/rest": "^2.4.3",
+    "@types/node": "^22.13.11",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.7"
   }
 }
