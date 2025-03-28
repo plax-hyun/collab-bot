@@ -34,7 +34,8 @@ client.on(Events.InteractionCreate, async interaction => {
       const guildMemberA = await guild.members.fetch(user.id);
       const guildMemberB = await guild.members.fetch(target.id);
 
-      const channel = await guild.channels.create({
+      try {
+        const channel = await guild.channels.create({
         name: `🤝｜협업-${guildMemberA.displayName}-${guildMemberB.displayName}`,
         type: ChannelType.GuildText,
         permissionOverwrites: [
@@ -62,6 +63,14 @@ client.on(Events.InteractionCreate, async interaction => {
       });
 
       await interaction.reply({ content: `✅ 비공개 채널을 생성하고 <@${target.id}>에게 요청을 전달했습니다.`, ephemeral: true });
+      } catch (error) {
+        if (error.code === 50013) {
+          await interaction.reply({ content: '❌ 봇에 채널 생성 권한이 없습니다. 서버 관리자에게 문의해주세요.', ephemeral: true });
+        } else {
+          console.error('채널 생성 중 오류:', error);
+          await interaction.reply({ content: '❌ 채널 생성 중 오류가 발생했습니다.', ephemeral: true });
+        }
+      }
     }
   }
 
