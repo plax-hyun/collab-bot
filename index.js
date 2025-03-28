@@ -1,5 +1,5 @@
 
-import { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ButtonBuilder, ButtonStyle, ActionRowBuilder, Events, SlashCommandBuilder, Routes } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Events, SlashCommandBuilder, Routes } from 'discord.js';
 import { config } from 'dotenv';
 import { REST } from '@discordjs/rest';
 
@@ -10,6 +10,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.DirectMessages
   ],
   partials: [Partials.Channel]
 });
@@ -34,11 +35,10 @@ client.on(Events.InteractionCreate, async interaction => {
       const guildMemberB = await guild.members.fetch(target.id);
 
       const channel = await guild.channels.create({
-        name: `${guildMemberA.displayName}-${guildMemberB.displayName}`,
+        name: `🤝｜협업-${guildMemberA.displayName}-${guildMemberB.displayName}`,
         type: ChannelType.GuildText,
         permissionOverwrites: [
           { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
           { id: target.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
           { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
         ]
@@ -68,23 +68,54 @@ client.on(Events.InteractionCreate, async interaction => {
   if (interaction.isButton()) {
     const [action, requesterId] = interaction.customId.split('-');
     const requester = await client.users.fetch(requesterId);
+    const channel = interaction.channel;
 
     if (action === 'accept') {
       await interaction.update({
         content: `🎉 협업이 수락되었습니다! <@${requesterId}>님이 이 채널에 참여합니다.`,
         components: []
       });
-      const guild = await client.guilds.fetch(GUILD_ID);
-      const channel = interaction.channel;
       await channel.permissionOverwrites.edit(requesterId, {
         ViewChannel: true,
         SendMessages: true
       });
     } else if (action === 'reject') {
-      await interaction.update({
-        content: `❌ 협업이 거절되었습니다. 채널이 곧 삭제됩니다...`,
+      const modal = new ModalBuilder()
+        .setCustomId(`reject-reason-${requesterId}`)
+        .setTitle('거절 사유 입력');
+
+      const input = new TextInputBuilder()
+        .setCustomId('reason')
+        .setLabel('거절 사유 (선택사항)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false);
+
+      const actionRow = new ActionRowBuilder().addComponents(input);
+      modal.addComponents(actionRow);
+      await interaction.showModal(modal);
+    }
+  }
+
+  if (interaction.isModalSubmit()) {
+    const [action, requesterId] = interaction.customId.split('-');
+    if (action === 'reject') {
+      const reason = interaction.fields.getTextInputValue('reason') || '사유 없음';
+      const channel = interaction.channel;
+
+      await interaction.reply({
+        content: `❌ 협업이 거절되었습니다. 채널이 곧 삭제됩니다...
+사유: ${reason}`,
         components: []
       });
+
+      try {
+        const requester = await client.users.fetch(requesterId);
+        await requester.send(`🚫 <@${interaction.user.id}>님이 협업 요청을 거절하셨습니다.
+사유: ${reason}`);
+      } catch (e) {
+        console.error('DM 전송 실패:', e);
+      }
+
       setTimeout(() => interaction.channel.delete(), 5000);
     }
   }
