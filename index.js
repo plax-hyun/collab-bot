@@ -29,8 +29,10 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (commandName === '협업요청') {
       const target = options.getUser('대상');
-      if (!target) return interaction.reply({ content: '❌ 대상을 지정해주세요.', flags: 64 });
-
+      if (!target) {
+        await interaction.reply({ content: '❌ 대상을 지정해주세요.', flags: 64 });
+        return;
+      }
       const guildMemberA = await guild.members.fetch(user.id);
       const guildMemberB = await guild.members.fetch(target.id);
 
