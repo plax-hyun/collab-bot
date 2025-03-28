@@ -117,11 +117,15 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 (async () => {
   try {
-    console.log('📡 슬래시 명령어 등록 중...');
+    console.log('🧹 기존 명령어 제거 중...');
+    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: [] });
+    console.log('✅ 기존 명령어 제거 완료');
+
+    console.log('📡 새로운 명령어 등록 중...');
     await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
       body: commands,
     });
-    console.log('✅ 슬래시 명령어가 등록되었습니다');
+    console.log('✅ 새로운 Slash 명령어 등록 완료');
   } catch (error) {
     console.error(error);
   }
