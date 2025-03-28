@@ -13,9 +13,9 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-const TOKEN = process.env.TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
-const GUILD_ID = process.env.GUILD_ID;
+const TOKEN = 'MTM1NTEwOTU1MzE3NTI2NTMwMQ.G-EzUN.drm-ksOCOKZbXm5RhKqpngcNkCduoBf225ftCg';
+const CLIENT_ID = '1355109553175265301';
+const GUILD_ID = '1161531538949799946';
 
 client.once('ready', () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
