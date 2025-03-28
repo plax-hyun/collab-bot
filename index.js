@@ -1,3 +1,15 @@
+import express from 'express';
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('🤖 Bot is alive!');
+});
+
+app.listen(PORT, () => {
+  console.log(`🌐 KeepAlive server running on port ${PORT}`);
+});
 
 import { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Events, SlashCommandBuilder, Routes } from 'discord.js';
 import { config } from 'dotenv';
