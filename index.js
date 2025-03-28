@@ -29,14 +29,13 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (commandName === '협업요청') {
       const target = options.getUser('대상');
-      if (!target) return interaction.reply({ content: '❌ 대상을 지정해주세요.', ephemeral: true });
+      if (!target) return interaction.reply({ content: '❌ 대상을 지정해주세요.', flags: 64 });
 
       const guildMemberA = await guild.members.fetch(user.id);
       const guildMemberB = await guild.members.fetch(target.id);
 
-      try {
-        const channel = await guild.channels.create({
-        name: `🤝｜협업-${guildMemberA.displayName}-${guildMemberB.displayName}`,
+      const channel = await guild.channels.create({
+        name: `${guildMemberA.displayName}-${guildMemberB.displayName}`,
         type: ChannelType.GuildText,
         permissionOverwrites: [
           { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
@@ -58,19 +57,12 @@ client.on(Events.InteractionCreate, async interaction => {
       const row = new ActionRowBuilder().addComponents(acceptButton, rejectButton);
 
       await channel.send({
-        content: `<@${target.id}>님, <@${user.id}>님의 협업 요청입니다. 수락 여부를 선택해주세요!`,
+        content: `<@${target.id}>님, <@${user.id}>님의 협업을 요청하셨습니다. 
+      협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`,
         components: [row]
       });
 
-      await interaction.reply({ content: `✅ 비공개 채널을 생성하고 <@${target.id}>에게 요청을 전달했습니다.`, ephemeral: true });
-      } catch (error) {
-        if (error.code === 50013) {
-          await interaction.reply({ content: '❌ 봇에 채널 생성 권한이 없습니다. 서버 관리자에게 문의해주세요.', ephemeral: true });
-        } else {
-          console.error('채널 생성 중 오류:', error);
-          await interaction.reply({ content: '❌ 채널 생성 중 오류가 발생했습니다.', ephemeral: true });
-        }
-      }
+      await interaction.reply({ content: `✅ <@${target.id}>님에게 협업 요청을 전달했습니다. \n상대방의 일정, 상황에 따라 협업이 거절될 수 있습니다. 상대방이 수락하면 협업방에 초대드립니다.`, flags: 64 });
     }
   }
 
@@ -81,7 +73,8 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (action === 'accept') {
       await interaction.update({
-        content: `🎉 협업이 수락되었습니다! <@${requesterId}>님이 이 채널에 참여합니다.`,
+        content: `🎉 협업이 시작되었습니다!
+        <@${requesterId}> 님, <@${interaction.user.id}> 님의 창작 대화방입니다. \n알플레이의 도움이 필요한 경우엔 호출해주시고, 자유롭게 대화 하시면 됩니다. ^^ \n알플레이는 창작자들을 언제나 응원합니다!`,
         components: []
       });
       await channel.permissionOverwrites.edit(requesterId, {
@@ -106,26 +99,21 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 
   if (interaction.isModalSubmit()) {
-    const [action, requesterId] = interaction.customId.split('-');
-    if (action === 'reject') {
+    const [mainAction, subAction, requesterId] = interaction.customId.split('-');
+    if (mainAction === 'reject' && subAction === 'reason') {
       const reason = interaction.fields.getTextInputValue('reason') || '사유 없음';
       const channel = interaction.channel;
 
-      await interaction.reply({
-        content: `❌ 협업이 거절되었습니다. 채널이 곧 삭제됩니다...
-사유: ${reason}`,
-        components: []
-      });
+      await interaction.deferUpdate();
 
       try {
         const requester = await client.users.fetch(requesterId);
-        await requester.send(`🚫 <@${interaction.user.id}>님이 협업 요청을 거절하셨습니다.
-사유: ${reason}`);
+        await requester.send(`아쉽게도 <@${interaction.user.id}>님이 협업 요청을 거절하셨습니다.다른 분에게 협업을 요청해보세요!\n사유: ${reason}`);
       } catch (e) {
         console.error('DM 전송 실패:', e);
       }
 
-      setTimeout(() => interaction.channel.delete(), 5000);
+      setTimeout(() => channel.delete(), 3000);
     }
   }
 });
@@ -133,7 +121,7 @@ client.on(Events.InteractionCreate, async interaction => {
 const commands = [
   new SlashCommandBuilder()
     .setName('협업요청')
-    .setDescription('작가에게 협업 요청을 보냅니다.')
+    .setDescription('원하는 창작자에게 협업 요청을 보냅니다.')
     .addUserOption(opt => opt.setName('대상').setDescription('협업 대상').setRequired(true))
 ].map(cmd => cmd.toJSON());
 
