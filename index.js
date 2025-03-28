@@ -1,3 +1,6 @@
+
+// 개선된 흐름: 비공개 채널에서 수락/거절 버튼으로 응답 받기 + 봇 권한 추가
+
 import { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ButtonBuilder, ButtonStyle, ActionRowBuilder, Events, SlashCommandBuilder, Routes } from 'discord.js';
 import { config } from 'dotenv';
 import { REST } from '@discordjs/rest';
@@ -13,9 +16,9 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-const TOKEN = 'MTM1NTEwOTU1MzE3NTI2NTMwMQ.G-EzUN.drm-ksOCOKZbXm5RhKqpngcNkCduoBf225ftCg';
-const CLIENT_ID = '1355109553175265301';
-const GUILD_ID = '1161531538949799946';
+const TOKEN = process.env.MTM1NTEwOTU1MzE3NTI2NTMwMQ.G-EzUN.drm-ksOCOKZbXm5RhKqpngcNkCduoBf225ftCg;
+const CLIENT_ID = process.env.1355109553175265301;
+const GUILD_ID = process.env.1161531538949799946;
 
 client.once('ready', () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
@@ -39,6 +42,7 @@ client.on(Events.InteractionCreate, async interaction => {
           { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
           { id: user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
           { id: target.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+          { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
         ]
       });
 
