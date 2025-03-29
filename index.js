@@ -31,6 +31,41 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
+const GROUP_CHAT_CATEGORIES = [
+  '978917835231354900',
+  '1119132516708790314',
+  '1132846859124224120',
+  '1132872038646829056',
+  '1206851587817873478',
+  '1237282787342680118',
+  '1239387200404193342',
+  '1279967959317614692',
+  '1290886138378194995',
+  '1311883311790030879',
+  '1331136233354694747'
+];
+
+let selectedCategory = null;
+
+for (const categoryId of GROUP_CHAT_CATEGORIES) {
+  const childCount = guild.channels.cache.filter(c => c.parentId === categoryId).size;
+  if (childCount < 50) {
+    selectedCategory = categoryId;
+    break;
+  }
+}
+
+const channel = await guild.channels.create({
+  name: `${guildMemberA.displayName}-${guildMemberB.displayName}`,
+  type: ChannelType.GuildText,
+  parent: selectedCategory ?? null,
+  permissionOverwrites: [
+    { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+    { id: target.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+    { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+  ]
+});
+
 client.once('ready', () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
