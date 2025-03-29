@@ -11,7 +11,11 @@ app.listen(PORT, () => {
   console.log(`🌐 KeepAlive server running on port ${PORT}`);
 });
 
-import { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Events, SlashCommandBuilder, Routes } from 'discord.js';
+import {
+  Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField,
+  ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder,
+  TextInputStyle, Events, SlashCommandBuilder, Routes
+} from 'discord.js';
 import { config } from 'dotenv';
 import { REST } from '@discordjs/rest';
 
@@ -32,17 +36,10 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
 const GROUP_CHAT_CATEGORIES = [
-  '978917835231354900',
-  '1119132516708790314',
-  '1132846859124224120',
-  '1132872038646829056',
-  '1206851587817873478',
-  '1237282787342680118',
-  '1239387200404193342',
-  '1279967959317614692',
-  '1290886138378194995',
-  '1311883311790030879',
-  '1331136233354694747'
+  '978917835231354900', '1119132516708790314', '1132846859124224120',
+  '1132872038646829056', '1206851587817873478', '1237282787342680118',
+  '1239387200404193342', '1279967959317614692', '1290886138378194995',
+  '1311883311790030879', '1331136233354694747'
 ];
 
 client.once('ready', () => {
@@ -63,7 +60,6 @@ client.on(Events.InteractionCreate, async interaction => {
       const guildMemberA = await guild.members.fetch(user.id);
       const guildMemberB = await guild.members.fetch(target.id);
 
-      // 그룹채팅 카테고리 중 비어있는 곳을 찾기
       let selectedCategory = null;
       for (const categoryId of GROUP_CHAT_CATEGORIES) {
         const childCount = guild.channels.cache.filter(c => c.parentId === categoryId).size;
@@ -97,13 +93,14 @@ client.on(Events.InteractionCreate, async interaction => {
       const row = new ActionRowBuilder().addComponents(acceptButton, rejectButton);
 
       await channel.send({
-        content: `<@${target.id}>님, <@${user.id}>님의 협업을 요청하셨습니다. 
-      협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`,
+        content: `<@${target.id}>님, <@${user.id}>님의 협업을 요청하셨습니다.\n협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`,
         components: [row]
       });
 
-      await interaction.reply({ content: `✅ <@${target.id}>님에게 협업 요청을 전달했습니다. 
-상대방의 일정, 상황에 따라 협업이 거절될 수 있습니다. 상대방이 수락하면 협업방에 초대드립니다.`, flags: 64 });
+      await interaction.reply({
+        content: `✅ <@${target.id}>님에게 협업 요청을 전달했습니다.\n상대방의 일정, 상황에 따라 협업이 거절될 수 있습니다. 상대방이 수락하면 협업방에 초대드립니다.`,
+        flags: 64
+      });
     }
   }
 
@@ -114,10 +111,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (action === 'accept') {
       await interaction.update({
-        content: `🎉 협업이 시작되었습니다!
-        <@${requesterId}> 님, <@${interaction.user.id}> 님의 창작 대화방입니다. 
-알플레이의 도움이 필요한 경우엔 호출해주시고, 자유롭게 대화 하시면 됩니다. ^^ 
-알플레이는 창작자들을 언제나 응원합니다!`,
+        content: `🎉 협업이 시작되었습니다!\n<@${requesterId}> 님, <@${interaction.user.id}> 님의 창작 대화방입니다.\n알플레이의 도움이 필요한 경우엔 호출해주시고, 자유롭게 대화 하시면 됩니다. ^^\n알플레이는 창작자들을 언제나 응원합니다!`,
         components: []
       });
       await channel.permissionOverwrites.edit(requesterId, {
@@ -151,7 +145,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
       try {
         const requester = await client.users.fetch(requesterId);
-        await requester.send(`아쉽게도 <@${interaction.user.id}>님이 협업 요청을 거절하셨습니다.다른 분에게 협업을 요청해보세요!\n사유: ${reason}`);
+        await requester.send(`아쉽게도 <@${interaction.user.id}>님이 협업 요청을 거절하셨습니다. 다른 분에게 협업을 요청해보세요!\n사유: ${reason}`);
       } catch (e) {
         console.error('DM 전송 실패:', e);
       }
