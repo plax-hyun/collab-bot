@@ -11,22 +11,7 @@ app.listen(PORT, () => {
   console.log(`🌐 KeepAlive server running on port ${PORT}`);
 });
 
-import {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  ChannelType,
-  PermissionsBitField,
-  ButtonBuilder,
-  ButtonStyle,
-  ActionRowBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  Events,
-  SlashCommandBuilder,
-  Routes
-} from 'discord.js';
+import { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Events, SlashCommandBuilder, Routes } from 'discord.js';
 import { config } from 'dotenv';
 import { REST } from '@discordjs/rest';
 
@@ -60,16 +45,42 @@ const GROUP_CHAT_CATEGORIES = [
   '1331136233354694747'
 ];
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
-  // 🔁 하루에 한 번 오래된 채널 자동 정리 (3개월 이상 메시지 없음)
+  // 🔄 자동 채널 정리 로직
+  const guild = await client.guilds.fetch(GUILD_ID);
+  const fullGuild = await guild.fetch();
+  const channels = await fullGuild.channels.fetch();
+
+  const threeMonthsAgo = Date.now() - 1000 * 60 * 60 * 24 * 90;
+
+  for (const [channelId, channel] of channels) {
+    if (
+      channel.type === ChannelType.GuildText &&
+      GROUP_CHAT_CATEGORIES.includes(channel.parentId)
+    ) {
+      try {
+        const messages = await channel.messages.fetch({ limit: 1 });
+        const lastMessage = messages.first();
+
+        if (!lastMessage || lastMessage.createdTimestamp < threeMonthsAgo) {
+          await channel.delete();
+          console.log(`🗑️ 삭제된 채널: ${channel.name}`);
+        }
+      } catch (e) {
+        console.error(`❌ 메시지 확인 실패 - ${channel.name}`, e);
+      }
+    }
+  }
+
+  // 하루에 한 번씩 반복
   setInterval(async () => {
     const guild = await client.guilds.fetch(GUILD_ID);
-    const channels = await guild.channels.fetch();
-    const THREE_MONTHS_AGO = Date.now() - 1000 * 60 * 60 * 24 * 90;
+    const fullGuild = await guild.fetch();
+    const channels = await fullGuild.channels.fetch();
 
-    for (const [id, channel] of channels) {
+    for (const [channelId, channel] of channels) {
       if (
         channel.type === ChannelType.GuildText &&
         GROUP_CHAT_CATEGORIES.includes(channel.parentId)
@@ -78,16 +89,16 @@ client.once('ready', () => {
           const messages = await channel.messages.fetch({ limit: 1 });
           const lastMessage = messages.first();
 
-          if (!lastMessage || lastMessage.createdTimestamp < THREE_MONTHS_AGO) {
-            console.log(`🧹 오래된 채널 삭제: ${channel.name}`);
-            await channel.delete('자동 정리 - 최근 3개월 간 대화 없음');
+          if (!lastMessage || lastMessage.createdTimestamp < Date.now() - 1000 * 60 * 60 * 24 * 90) {
+            await channel.delete();
+            console.log(`🗑️ 삭제된 채널: ${channel.name}`);
           }
         } catch (e) {
-          console.error(`⚠️ 채널 검사 오류: ${channel.name}`, e);
+          console.error(`❌ 메시지 확인 실패 - ${channel.name}`, e);
         }
       }
     }
-  }, 1000 * 60 * 60 * 24); // 하루에 한 번 실행
+  }, 1000 * 60 * 60 * 24); // 하루마다 실행
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -136,8 +147,7 @@ client.on(Events.InteractionCreate, async interaction => {
       const row = new ActionRowBuilder().addComponents(acceptButton, rejectButton);
 
       await channel.send({
-        content: `<@${target.id}>님, <@${user.id}>님의 협업을 요청하셨습니다. 
-      협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`,
+        content: `<@${target.id}>님, <@${user.id}>님의 협업을 요청하셨습니다. \n협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`,
         components: [row]
       });
 
@@ -152,8 +162,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (action === 'accept') {
       await interaction.update({
-        content: `🎉 협업이 시작되었습니다!
-        <@${requesterId}> 님, <@${interaction.user.id}> 님의 창작 대화방입니다. \n알플레이의 도움이 필요한 경우엔 호출해주시고, 자유롭게 대화 하시면 됩니다. ^^ \n알플레이는 창작자들을 언제나 응원합니다!`,
+        content: `🎉 협업이 시작되었습니다!\n<@${requesterId}> 님, <@${interaction.user.id}> 님의 창작 대화방입니다. \n알플레이의 도움이 필요한 경우엔 호출해주시고, 자유롭게 대화 하시면 됩니다. ^^ \n알플레이는 창작자들을 언제나 응원합니다!`,
         components: []
       });
       await channel.permissionOverwrites.edit(requesterId, {
