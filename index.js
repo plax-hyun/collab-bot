@@ -11,7 +11,22 @@ app.listen(PORT, () => {
   console.log(`🌐 KeepAlive server running on port ${PORT}`);
 });
 
-import { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Events, SlashCommandBuilder, Routes } from 'discord.js';
+import {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  ChannelType,
+  PermissionsBitField,
+  ButtonBuilder,
+  ButtonStyle,
+  ActionRowBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  Events,
+  SlashCommandBuilder,
+  Routes
+} from 'discord.js';
 import { config } from 'dotenv';
 import { REST } from '@discordjs/rest';
 
@@ -48,7 +63,6 @@ const GROUP_CHAT_CATEGORIES = [
 client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
-  // 🔄 자동 채널 정리 로직
   const guild = await client.guilds.fetch(GUILD_ID);
   const fullGuild = await guild.fetch();
   const channels = await fullGuild.channels.fetch();
@@ -74,7 +88,6 @@ client.once('ready', async () => {
     }
   }
 
-  // 하루에 한 번씩 반복
   setInterval(async () => {
     const guild = await client.guilds.fetch(GUILD_ID);
     const fullGuild = await guild.fetch();
@@ -98,7 +111,7 @@ client.once('ready', async () => {
         }
       }
     }
-  }, 1000 * 60 * 60 * 24); // 하루마다 실행
+  }, 1000 * 60 * 60 * 24);
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -106,52 +119,73 @@ client.on(Events.InteractionCreate, async interaction => {
     const { commandName, options, user, guild } = interaction;
 
     if (commandName === '협업요청') {
-      const target = options.getUser('대상');
-      if (!target) {
-        await interaction.reply({ content: '❌ 대상을 지정해주세요.', flags: 64 });
-        return;
-      }
-      const guildMemberA = await guild.members.fetch(user.id);
-      const guildMemberB = await guild.members.fetch(target.id);
+      await interaction.deferReply({ ephemeral: true });
 
-      let selectedCategory = null;
-      for (const categoryId of GROUP_CHAT_CATEGORIES) {
-        const childCount = guild.channels.cache.filter(c => c.parentId === categoryId).size;
-        if (childCount < 50) {
-          selectedCategory = categoryId;
-          break;
+      try {
+        const target = options.getUser('대상');
+        if (!target) {
+          await interaction.editReply({ content: '❌ 대상을 지정해주세요.' });
+          return;
+        }
+
+        const guildMemberA = await guild.members.fetch(user.id);
+        const guildMemberB = await guild.members.fetch(target.id);
+
+        let selectedCategory = null;
+        for (const categoryId of GROUP_CHAT_CATEGORIES) {
+          const childCount = guild.channels.cache.filter(c => c.parentId === categoryId).size;
+          if (childCount < 50) {
+            selectedCategory = categoryId;
+            break;
+          }
+        }
+
+        const channel = await guild.channels.create({
+          name: `${guildMemberA.displayName}-${guildMemberB.displayName}`,
+          type: ChannelType.GuildText,
+          parent: selectedCategory ?? null,
+          permissionOverwrites: [
+            { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+            { id: target.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+            { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+          ]
+        });
+
+        const acceptButton = new ButtonBuilder()
+          .setCustomId(`accept-${user.id}`)
+          .setLabel('수락')
+          .setStyle(ButtonStyle.Success);
+
+        const rejectButton = new ButtonBuilder()
+          .setCustomId(`reject-${user.id}`)
+          .setLabel('거절')
+          .setStyle(ButtonStyle.Danger);
+
+        const row = new ActionRowBuilder().addComponents(acceptButton, rejectButton);
+
+        await channel.send({
+          content: `<@${target.id}>님, <@${user.id}>님의 협업을 요청하셨습니다. \n협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`,
+          components: [row]
+        });
+
+        await interaction.editReply({
+          content: `✅ <@${target.id}>님에게 협업 요청을 전달했습니다. \n상대방의 일정, 상황에 따라 협업이 거절될 수 있습니다. 상대방이 수락하면 협업방에 초대드립니다.`
+        });
+
+      } catch (err) {
+        console.error('❌ 협업 요청 처리 중 오류:', err);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '⚠️ 협업 요청 처리 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.',
+            ephemeral: true
+          });
+        } else {
+          await interaction.editReply({
+            content: '⚠️ 협업 요청 처리 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.'
+          });
         }
       }
-
-      const channel = await guild.channels.create({
-        name: `${guildMemberA.displayName}-${guildMemberB.displayName}`,
-        type: ChannelType.GuildText,
-        parent: selectedCategory ?? null,
-        permissionOverwrites: [
-          { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: target.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-          { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
-        ]
-      });
-
-      const acceptButton = new ButtonBuilder()
-        .setCustomId(`accept-${user.id}`)
-        .setLabel('수락')
-        .setStyle(ButtonStyle.Success);
-
-      const rejectButton = new ButtonBuilder()
-        .setCustomId(`reject-${user.id}`)
-        .setLabel('거절')
-        .setStyle(ButtonStyle.Danger);
-
-      const row = new ActionRowBuilder().addComponents(acceptButton, rejectButton);
-
-      await channel.send({
-        content: `<@${target.id}>님, <@${user.id}>님의 협업을 요청하셨습니다. \n협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`,
-        components: [row]
-      });
-
-      await interaction.reply({ content: `✅ <@${target.id}>님에게 협업 요청을 전달했습니다. \n상대방의 일정, 상황에 따라 협업이 거절될 수 있습니다. 상대방이 수락하면 협업방에 초대드립니다.`, flags: 64 });
     }
   }
 
