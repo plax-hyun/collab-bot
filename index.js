@@ -8,7 +8,7 @@ import winston from 'winston';
 // 환경 변수 로드
 config();
 
-// Express 서버 설정 (헬스체크 및 UptimeRobot용)
+// Express 서버 설정 (Render 헬스체크 및 UptimeRobot용)
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -36,24 +36,11 @@ const logger = winston.createLogger({
     winston.format.json()
   ),
   transports: [
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log' }),
+    new winston.transports.File({ filename: 'error.log', level: 'error', maxsize: 5 * 1024 * 1024, maxFiles: 5 }),
+    new winston.transports.File({ filename: 'combined.log', maxsize: 5 * 1024 * 1024, maxFiles: 5 }),
     new winston.transports.Console()
   ]
 });
-
-// 로그 파일 크기 제한 (5MB, 최대 5개 파일)
-logger.add(new winston.transports.File({
-  filename: 'error.log',
-  level: 'error',
-  maxsize: 5 * 1024 * 1024, // 5MB
-  maxFiles: 5
-}));
-logger.add(new winston.transports.File({
-  filename: 'combined.log',
-  maxsize: 5 * 1024 * 1024, // 5MB
-  maxFiles: 5
-}));
 
 // 디스코드 클라이언트 설정
 const client = new Client({
@@ -126,7 +113,7 @@ client.once('ready', async () => {
   cron.schedule('0 0 * * *', cleanOldChannels);
 });
 
-// 예외 처리 (자동 재시작 지원)
+// 예외 처리
 process.on('uncaughtException', (err) => {
   logger.error('Uncaught Exception', { error: err.message });
 });
@@ -172,9 +159,9 @@ client.on(Events.InteractionCreate, async interaction => {
           type: ChannelType.GuildText,
           parent: selectedCategory,
           permissionOverwrites: [
-          { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: target.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-          { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+            { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+            { id: target.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+            { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
           ]
         });
 
