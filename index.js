@@ -168,6 +168,7 @@ client.on(Events.InteractionCreate, async interaction => {
           parent: selectedCategory,
           permissionOverwrites: [
             { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+            { id: user.id, deny: [PermissionsBitField.Flags.ViewChannel] }, // 요청자는 수락 전까지 볼 수 없음
             { id: target.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
             { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
           ]
