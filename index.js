@@ -86,8 +86,14 @@ async function cleanOldChannels() {
         try {
           const messages = await channel.messages.fetch({ limit: 1 });
           const lastMessage = messages.first();
+          const channelCreatedAt = channel.createdTimestamp;
 
-          if (!lastMessage || lastMessage.createdTimestamp < threeMonthsAgo) {
+          // 마지막 활동 시간: 마지막 메시지 또는 채널 생성 시간 중 최신
+          const lastActivity = lastMessage
+            ? Math.max(lastMessage.createdTimestamp, channelCreatedAt)
+            : channelCreatedAt;
+
+          if (lastActivity < threeMonthsAgo) {
             await channel.delete();
             logger.info(`🗑️ 삭제된 채널: ${channel.name}`);
           }
@@ -132,6 +138,8 @@ client.on(Events.InteractionCreate, async interaction => {
 
       try {
         const target = options.getUser('대상');
+        const requestMessage = options.getString('메시지') || null;
+
         if (!target) {
           await interaction.editReply({ content: '❌ 대상을 지정해주세요.' });
           return;
@@ -177,8 +185,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
         const row = new ActionRowBuilder().addComponents(acceptButton, rejectButton);
 
+        const messageContent = requestMessage
+          ? `<@${target.id}>님, <@${user.id}>님이 협업을 요청하셨습니다.\n\n💬 **요청 메시지:**\n> ${requestMessage}\n\n협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`
+          : `<@${target.id}>님, <@${user.id}>님이 협업을 요청하셨습니다.\n협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`;
+
         await channel.send({
-          content: `<@${target.id}>님, <@${user.id}>님의 협업을 요청하셨습니다. \n협업 수락 여부를 선택해주세요! 자유롭게 결정해주시면 됩니다.`,
+          content: messageContent,
           components: [row]
         });
 
@@ -244,8 +256,8 @@ client.on(Events.InteractionCreate, async interaction => {
         const requester = await client.users.fetch(requesterId);
         await requester.send(`아쉽게도 <@${interaction.user.id}>님이 협업 요청을 거절하셨습니다. 다른 분에게 협업을 요청해보세요!\n사유: ${reason}`);
       } catch (e) {
-        logger.error('DM 전송 실패', { error: e.message });
-        await channel.send(`<@${requesterId}>님에게 DM 전송에 실패했습니다. 거절 사유: ${reason}`);
+        logger.error('DM 전송 실패', { error: e.message, requesterId, reason });
+        await channel.send(`<@${requesterId}>님에게 DM 전송에 실패했습니다. DM 설정을 확인해주세요.`);
       }
 
       setTimeout(() => {
@@ -261,19 +273,16 @@ const commands = [
     .setName('협업요청')
     .setDescription('원하는 창작자에게 협업 요청을 보냅니다.')
     .addUserOption(opt => opt.setName('대상').setDescription('협업 대상').setRequired(true))
+    .addStringOption(opt => opt.setName('메시지').setDescription('협업 요청과 함께 전달할 메시지 (선택사항)').setRequired(false))
 ].map(cmd => cmd.toJSON());
 
-const rest = new REST({ version: '10', timeout: 1000 }).setToken(TOKEN);
+const rest = new REST({ version: '10', timeout: 15000 }).setToken(TOKEN);
 
 (async () => {
   try {
-    console.log('🧹 기존 명령어 제거 중...');
-    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: [] });
-    console.log('✅ 기존 명령어 제거 완료');
-
-    console.log('📡 새로운 명령어 등록 중...');
+    console.log('📡 Slash 명령어 등록 중...');
     await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-    console.log('✅ 새로운 Slash 명령어 등록 완료');
+    console.log('✅ Slash 명령어 등록 완료');
   } catch (error) {
     logger.error('명령어 등록 실패', { error: error.message });
   }
